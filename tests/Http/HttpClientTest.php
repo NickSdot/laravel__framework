@@ -7,6 +7,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\NetworkException;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Exception\TooManyRedirectsException;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\Create;
@@ -3224,11 +3225,13 @@ class HttpClientTest extends TestCase
         $pendingRequest = new PendingRequest();
 
         $pendingRequest->setHandler(function () {
-            throw new GuzzleRequestException(
-                'cURL error 28: Operation timed out',
-                new GuzzleRequest('GET', 'https://timeout-laravel.example'),
-                new Psr7Response(301)
-            );
+            $message = 'cURL error 28: Operation timed out';
+            $request = new GuzzleRequest('GET', 'https://timeout-laravel.example');
+            $response = new Psr7Response(301);
+
+            throw class_exists(ResponseException::class)
+                ? new ResponseException($message, $request, $response)
+                : new GuzzleRequestException($message, $request, $response);
         });
 
         $pendingRequest->get('https://timeout-laravel.example');
@@ -4977,7 +4980,7 @@ class HttpClientTest extends TestCase
     public function testNetworkExceptionIsConvertedToConnectionException()
     {
         if (! class_exists(NetworkException::class)) {
-            $this->markTestSkipped('NetworkException requires guzzlehttp/guzzle ^7.11.');
+            $this->markTestSkipped('NetworkException requires guzzlehttp/guzzle ^8.0.');
         }
 
         $this->expectException(ConnectionException::class);
@@ -4998,7 +5001,7 @@ class HttpClientTest extends TestCase
     public function testNetworkExceptionInPoolIsConsideredConnectionException()
     {
         if (! class_exists(NetworkException::class)) {
-            $this->markTestSkipped('NetworkException requires guzzlehttp/guzzle ^7.11.');
+            $this->markTestSkipped('NetworkException requires guzzlehttp/guzzle ^8.0.');
         }
 
         $networkException = new NetworkException('Network error', new GuzzleRequest('GET', '/'));

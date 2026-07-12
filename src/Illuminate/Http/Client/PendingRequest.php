@@ -1119,7 +1119,7 @@ class PendingRequest
             } catch (TransferException $e) {
                 if (($response = $this->responseFromException($e)) !== null) {
                     $this->marshalTransportExceptionWithResponse($e, $response);
-                } else {
+                } elseif (method_exists($e, 'getRequest')) {
                     $this->marshalTransportException($e);
                 }
 
@@ -1234,7 +1234,7 @@ class PendingRequest
                     return $this->populateResponse($this->newResponse($response));
                 }
 
-                if ($e instanceof TransferException) {
+                if ($e instanceof TransferException && method_exists($e, 'getRequest')) {
                     $exception = new ConnectionException($e->getMessage(), 0, $e);
 
                     $this->dispatchConnectionFailedEvent(
@@ -1746,7 +1746,8 @@ class PendingRequest
         $required = $this->persistentTransport === PersistentTransport::Required;
 
         // Guzzle 8: persistent (cross-request) sharing.
-        if (defined(TransportSharing::class.'::PERSISTENT_PREFER')) {
+        if (defined(TransportSharing::class.'::PERSISTENT_PREFER') &&
+            defined(TransportSharing::class.'::PERSISTENT_REQUIRE')) {
             return $required
                 ? TransportSharing::PERSISTENT_REQUIRE
                 : TransportSharing::PERSISTENT_PREFER;
